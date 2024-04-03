@@ -1,295 +1,107 @@
 #include <iostream>
-
-using namespace std;
-
-// Data Class
-class PrintItem {
-public:
-    float fileSize;
-    string fileName;
-
-    PrintItem(float fileSize, string fileName) : fileSize(fileSize), fileName(fileName) {}
-
-    void print() {
-        cout << fileSize << " " << endl;
-        cout << fileName << " " << endl;
+#include <vector>
+#include <limits>
+#include <algorithm>
+//You may choose to maintain a Priority Queue for all the discovered edges to pick the minimum edge every time. A solution without a Priority Queue will also be accepted.
+class PQ {
+public: //constructor
+    PQ(int verticesCount) : prev(verticesCount, -1), distances(verticesCount, std::numeric_limits<int>::max()), visited(verticesCount, false) {
+      
     }
-};
+    ~PQ() {
+      
+    } // destructor
 
-// Node Class
-template <typename T>
-class Node {
-public:
-    T* value;
-    Node<T>* next;
-
-    Node(T* value) : value(value), next(nullptr) {}
-
-    void print() { value->print(); }
-};
-
-// LLStack
-template <typename T>
-class LLStack {
-private:
-    Node<T>* top;
-    int stackSize;
-    int SMAXITEMS;
-
-public:
-    // Constructor
-    LLStack() : top(nullptr), stackSize(0), SMAXITEMS(10) {}
-
-    Node<T>* getTop() {
-        return top;
+    void enqueue(int vertex, int cost) {
+        distances[vertex] = cost;
     }
 
-    int getStackSize() {
-        return stackSize;
+    std::pair<int, int> dequeueMin() {
+      
+        int minIndex = findMinIndex();
+      
+          visited[minIndex] = true;
+        return std::make_pair(minIndex, distances[minIndex]);
     }
 
-    LLStack(T* value) : top(new Node<T>(value)), stackSize(1) {}
+    bool isEmpty() const {
+        return std::all_of(visited.begin(), visited.end(), [](bool v) { return v; });
+    }
 
-    // Destructor
-    ~LLStack() {
-        Node<T>* temp = top;
-        while (top) {
-            top = top->next;
-            delete temp;
-            temp = top;
+    std::vector<int> prev;
+
+  private:
+    std::vector<int> distances;
+    std::vector<bool> visited;
+
+    int findMinIndex() const {
+        int minIndex = -1;
+        int minDistance = std::numeric_limits<int>::max();
+
+        for (int i = 0; i < distances.size(); ++i) {
+            if (!visited[i] && distances[i] < minDistance) {
+                minDistance = distances[i];
+                minIndex = i;
+            }
         }
+
+        return minIndex;
     }
 
-void printList() {
-    LLStack<T> temp;
+    friend void findMinimumSpanningTree(int graph[][5], int verticesCount, PQ& priorityq, std::vector<std::pair<int, int>>& mstEdges);
+};
 
-    // peek, push, & pop to print the list
-    while (!isEmpty()) {
-        T* item = peek();
-        pop();
-        temp.push(item);
-    }
-    while (!temp.isEmpty()) {
-        T* item = temp.peek();
-        temp.pop();
-        push(item);
-        item->print();
-    }
+void findMinimumSpanningTree(int graph[][5], int verticesCount, PQ& priorityq, std::vector<std::pair<int, int>>& mstEdges) {
+    int startVertex = 0;
+    priorityq.enqueue(startVertex, 0);
+
+    while (!priorityq.isEmpty()) {
+        int minVertex = priorityq.dequeueMin().first;
+       int currentVertex = minVertex;
+   int currentDistance = priorityq.distances[minVertex];
+
+        for (int x = 0; x < verticesCount; ++x) {
+            if (graph[currentVertex][x] && !priorityq.visited[x] && graph[currentVertex][x] < priorityq.distances[x]) {
+                priorityq.enqueue(x, graph[currentVertex][x]);
+                priorityq.prev[x] = currentVertex; }
+        }
+
+        
+        for (int i = 0; i < verticesCount; ++i) {
+          if (!priorityq.visited[i] && graph[currentVertex][i] && graph[currentVertex][i] < priorityq.distances[i]) {
+                priorityq.distances[i] = graph[currentVertex][i];
+            }
+        }
+
+        mstEdges.push_back({currentVertex, currentDistance});
+
+      
+ }
+  
 }
 
-    
-
-    bool isFull() {
-        return stackSize == SMAXITEMS;
-    }
-
-    bool isEmpty() {
-        return stackSize == 0;
-    }
-
-    void push(T* value) {
-        if (isFull()) {
-            return;
-        }
-        Node<T>* newNode = new Node<T>(value);
-        newNode->next = top;
-        top = newNode;
-        stackSize++;
-    }
-
-    void pop() {
-        if (!isEmpty()) {
-            Node<T>* temp = top;
-            top = top->next;
-            delete temp;
-            stackSize--;
-        }
-    }
-
-    T* peek() {
-        if (!isEmpty()) {
-            return top->value;
-        }
-        return nullptr;
-    }
-
-    //void print() { //ALTER THIS FOR STACK
-        //Node<T>* temp = top;
-        //while (temp != nullptr) {
-         //   temp->print();
-         //   temp = temp->next;
-        //}
-   // }
-};
-
-// StackQ Class
-template <typename T>
-class StackQ {
-private:
-    LLStack<T>* enQStack;
-    LLStack<T>* deQStack;
-    int queueSize;
-    const int QMAXITEMS;
-
-public:
-    StackQ() : enQStack(new LLStack<T>()), deQStack(new LLStack<T>()), queueSize(0), QMAXITEMS(10) {}
-
-    ~StackQ() {
-        delete enQStack;
-        delete deQStack;
-    }
-
-    bool IsFull() {
-        return queueSize == QMAXITEMS;
-    }
-
-    bool IsEmpty() {
-        return queueSize == 0;
-    }
-
-    void enqueue(T* item) {
-        if (IsFull()) {
-            cout << "Queue is full. Cannot enqueue." << endl;
-            return;
-        }
-
-        enQStack->push(item);
-        queueSize++;
-    }
-
-    void dequeue() {
-        if (IsEmpty()) {
-            cout << "Queue is empty. Cannot dequeue." << endl;
-            return;
-        }
-
-        if (deQStack->isEmpty()) {
-            while (!enQStack->isEmpty()) {
-                T* item = enQStack->peek();
-                enQStack->pop();
-                deQStack->push(item);
-            }
-        }
-
-        deQStack->pop();
-        queueSize--;
-    }
-
-    T* peek() {
-        if (IsEmpty()) {
-            cout << "The queue is empty. Cannot peek." << endl;
-            return nullptr;
-        }
-
-        if (deQStack->isEmpty()) {
-            while (!enQStack->isEmpty()) {
-                T* item = enQStack->peek();
-                enQStack->pop();
-                deQStack->push(item);
-            }
-        }
-
-        return deQStack->peek();
-    }
-
-    void printQueue() {
-        cout << "Queue Elements: \n";
-        deQStack->printList();
-        enQStack->printList();
-        cout << endl;
-    }
-
-    int getSize() {
-        return queueSize;
-    }
-
-    void printStacks() {
-        cout << "enQStack: ";
-        enQStack->printList();
-        cout << "deQStack: ";
-        deQStack->printList();
-    }
-};
-
 int main() {
-    // create StackQ object
-    StackQ<PrintItem>* myQueue = new StackQ<PrintItem>();
+    int graphMatrix[5][5] = {
+        {0, 8, 14, 0, 0},
+        {8, 0, 12, 18, 9},
+        {14, 12, 0, 23, 0},
+        {0, 18, 23, 0, 7},
+        {0, 9, 0, 7, 0}
+    };
 
+    int verticesCount = 5;
 
-// pre populating
-  PrintItem* d1 = new PrintItem(10, "a");
-  PrintItem* d2 = new PrintItem(11, "b");
-  PrintItem* d3 = new PrintItem(12, "c");
-  PrintItem* d4 = new PrintItem(14, "d");
-  PrintItem* d5 = new PrintItem(15, "e");
-  PrintItem* d6 = new PrintItem(16, "d");
-    char choice;
+    PQ priorityq(verticesCount);
+    std::vector<std::pair<int,int>>mstEdges;
 
-  myQueue -> enqueue(d1);
-  myQueue -> enqueue(d2);
-  myQueue -> enqueue(d3);
-  myQueue -> enqueue(d4);
-  myQueue -> enqueue(d5);
-  myQueue -> enqueue(d6);
-  
-;
-    do {
-        cout << "\nMenu:\n";
-        cout << "a. Add Item to print queue\n";
-        cout << "b. Delete from print queue\n";
-        cout << "c. Peek from the print queue\n";
-        cout << "d. Display the print queue\n";
-        cout << "e. Display print queue size\n";
-        cout << "f. Display enQStack and deQStack\n";
-        cout << "g. Exit\n";
-        cout << "Enter your choice: ";
-        cin >> choice;
+    findMinimumSpanningTree(graphMatrix, verticesCount, priorityq, mstEdges);
 
-        switch (choice) {
-            case 'a': {
-                float fileSize;
-                string fileName;
-                cout << "Enter the file size: ";
-                cin >> fileSize;
-                cout << "Enter the file name: ";
-                cin >> fileName;
+    std::cout << "Prim’s MST is Edge -> Cost\n";
+    for (const auto & edge : mstEdges) {
+        if (priorityq.prev[edge.first] != -1) 
+        {
 
-                PrintItem* newItem = new PrintItem(fileSize, fileName);
-                myQueue->enqueue(newItem);
-              myQueue -> printQueue();
-                break;
-            }
-            case 'b':
-                myQueue->dequeue();
-              myQueue -> printQueue();
-                break;
-            case 'c': {
-                PrintItem* peekedItem = myQueue->peek();
-                if (peekedItem != nullptr) {
-                    cout << "Peeked Item: ";
-                    peekedItem->print();
-                }
-                break;
-            }
-            case 'd':
-                myQueue->printQueue();
-                break;
-            case 'e':
-                cout << "Print the queue size: " << myQueue->getSize() << endl;
-                break;
-            case 'f':
-                myQueue->printStacks();
-                break;
-            case 'g':
-                cout << "You have exited the program.\n";
-                break;
-            default:
-                cout << "Invalid input choice. Please try again.\n";
-                break;
-        }
-    } while (choice != 'g');
-
-    delete myQueue;
-
-    return 0;
+            std::cout << priorityq.prev[edge.first] << " - " << edge.first << " -> " << edge.second << "\n"; }
+    }
+ return 0;
 }
